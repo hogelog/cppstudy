@@ -1,8 +1,4 @@
-#include <iostream>
-#include <vector>
 #include <stack>
-#include <map>
-#include <cmath>
 
 #include <boost/format.hpp>
 #include <boost/foreach.hpp>
@@ -40,18 +36,62 @@ inline static char cell2char(const Cell& cell)
 {
     return (cell==PLACED ? '1' : (cell==ABLE ? '0' : (cell==DISABLE ? 'x' : 'u')));
 }
-inline static void print_buffer(int size, const BoardBuffer& buf)
+
+Solution::Solution (size_t size) :
+    size(size),
+    solutions(0)
 {
-    int col = 0;
-    BOOST_FOREACH(const Cell& cell, buf) {
-        std::cout << cell2char(cell) << (((++col%size)==0) ? '\n' : ' ');
-    }
 }
 
+Solution::Solution (Solution& sol) :
+    size(sol.size),
+    solutions(sol.solutions)
+{
+}
 
-Board::Board(int n) :
+Solution::~Solution ()
+{
+    BOOST_FOREACH (BoardBuffer * const buf, solutions) {
+        delete buf;
+    }
+    solutions.clear();
+}
+
+size_t Solution::count () const
+{
+    return solutions.size();
+}
+
+size_t Solution::add (BoardBuffer * const buf)
+{
+    solutions.push_back(buf);
+    return solutions.size();
+}
+
+BoardBuffer * const & Solution::operator[] (size_t num) const
+{
+    assert(0 <= num && num < count());
+    return solutions[num];
+}
+
+std::string const Solution::get_string(size_t num) const
+{
+    assert(0 <= num && num < count());
+    BoardBuffer * const buf = solutions[num];
+
+    std::string str;
+    size_t col = 0;
+    BOOST_FOREACH(const Cell& cell, *buf) {
+        str += cell2char(cell);
+        str += ((++col % size) == 0 ? '\n' : ' ');
+    }
+
+    return str;
+}
+
+Board::Board(size_t n) :
     buffer(n*n, ABLE),
-    solution(0),
+    solution(n),
     size(n),
     queens(0)
 {
@@ -59,12 +99,12 @@ Board::Board(int n) :
 
 Board::Board(Board& board) :
     buffer(board.size*board.size),
-    solution(0),
+    solution(board.size),
     size(board.size),
     queens(board.queens)
 {
-    for (int y=0;y<size;++y) {
-        for (int x=0;x<size;++x) {
+    for (int y=0;y<static_cast<int>(size);++y) {
+        for (int x=0;x<static_cast<int>(size);++x) {
             operator()(x, y) = board(x, y);
         }
     }
@@ -72,12 +112,9 @@ Board::Board(Board& board) :
 
 Board::~Board()
 {
-    BOOST_FOREACH(BoardBuffer * const &buf, solution) {
-        delete buf;
-    }
 }
 
-void Board::reset_buffer(int queens, int x, int y)
+void Board::reset_buffer(size_t queens, int x, int y)
 {
     this->queens = queens;
     for (int cx=x, cy=y;inboard(size, cx, cy);boost::tie(cx, cy)=pos_next(size, cx, cy)) {
@@ -96,8 +133,8 @@ Cell& Board::operator() (int x, int y)
 
 bool Board::placable (int x, int y)
 {
-    for (int cy=0;cy<size;++cy) {
-        for (int cx=0;cx<size;++cx) {
+    for (int cy=0;cy<static_cast<int>(size);++cy) {
+        for (int cx=0;cx<static_cast<int>(size);++cx) {
             if (operator()(cx, cy)==PLACED) {
                 if (cx == x || cy == y || abs(cy-y) == abs(cx-x))
                     return false;
@@ -110,23 +147,24 @@ bool Board::placable (int x, int y)
 void Board::place (int x, int y)
 {
     assert(operator()(x, y)==ABLE);
-    for (int cx=0;cx<size;++cx) {
+    for (int cx=0;cx<static_cast<int>(size);++cx) {
         operator()(cx, y) = cx==x ? PLACED : DISABLE;
     }
-    for (int cy=y+1;cy<size;++cy) {
-        for (int cx=0;cx<size;++cx) {
+    for (int cy=y+1;cy<static_cast<int>(size);++cy) {
+        for (int cx=0;cx<static_cast<int>(size);++cx) {
             operator()(cx, cy) = placable(cx, cy) ? ABLE : DISABLE;
         }
     }
 }
 
-const Solution& Board::solve()
+const Solution& Board::solve ()
 {
-    if (solution.size()!=0)
+    if (solution.count()!=0)
         return solution;
 
     std::stack<boost::tuple<int, int, int> > stack;
-    int queens = 0, x = 0, y = 0;
+    size_t queens = 0;
+    int x = 0, y = 0;
     int trying = 0;
     for (;;) {
         ++trying;
@@ -138,7 +176,7 @@ const Solution& Board::solve()
                     stack.push(boost::make_tuple(queens, nx, ny));
                 place(x, y);
                 if (++queens == size) {
-                    solution.push_back(new BoardBuffer(buffer));
+                    solution.add(new BoardBuffer(buffer));
                     break;
                 }
             }
@@ -157,15 +195,4 @@ const Solution& Board::solve()
     }
 
     return solution;
-}
-
-int Board::print_solution(const Solution& solution)
-{
-    int solutions = 0;
-    BOOST_FOREACH(BoardBuffer * const &buf, solution) {
-        std::cout << boost::format("solution %1%:\n") % (++solutions);
-        print_buffer(size, *buf);
-        std::cout << std::endl;
-    }
-    return solution.size();
 }

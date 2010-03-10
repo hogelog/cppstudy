@@ -2,7 +2,7 @@ TARGETS = nqueen
 CXXFLAGS = -Wall
 all: $(TARGETS)
 test: $(TARGETS)
-	./nqueen 4
+	./nqueen -a 4
 clean:
 	rm $(TARGETS) *.o
 nqueen: nqueen.o main.o

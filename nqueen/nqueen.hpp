@@ -1,8 +1,24 @@
+#include <vector>
+#include <string>
+
 typedef enum {
     PLACED, ABLE, DISABLE, UNKNOWN
 } Cell;
 typedef std::vector<Cell> BoardBuffer;
-typedef std::vector<BoardBuffer*> Solution;
+
+class Solution {
+    private:
+        size_t const size;
+        std::vector<BoardBuffer *> solutions;
+    public:
+        Solution (size_t);
+        Solution (Solution &);
+        ~Solution ();
+        size_t count() const;
+        size_t add(BoardBuffer *);
+        BoardBuffer * const & operator[](size_t) const;
+        std::string const get_string(size_t) const;
+};
 
 class Board {
     private:
@@ -10,16 +26,15 @@ class Board {
         Solution solution;
 
     public:
-        const int size;
-        int queens;
+        const size_t size;
+        size_t queens;
 
-        Board(int);
+        Board(size_t);
         Board(Board&);
         ~Board();
-        void reset_buffer(int, int, int);
+        void reset_buffer(size_t, int, int);
         Cell& operator() (int, int);
         bool placable (int, int);
         void place (int, int);
         const Solution& solve();
-        int print_solution(const Solution&);
 };

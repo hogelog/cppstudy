@@ -1,4 +1,5 @@
 #include <iostream>
+#include <boost/range.hpp>
 #include <boost/format.hpp>
 #include <boost/tuple/tuple.hpp>
 #include <boost/program_options.hpp>
@@ -51,10 +52,14 @@ int main (int argc, char *argv[])
     const Solution& sol = board.solve();
     std::cout <<
         "queens: " << N << "\n" <<
-        "solutions: " << sol.size() << "\n";
+        "solutions: " << sol.count() << "\n";
 
-    if (vmap->count("all"))
-        board.print_solution(sol);
+    if (vmap->count("all")) {
+        for (size_t i=0;i<sol.count();++i) {
+            std::cout <<
+                boost::format("solution %u\n%s\n") % (i+1) % sol.get_string(i);
+        }
+    }
 
     return 0;
 }
